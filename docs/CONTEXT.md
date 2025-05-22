@@ -69,69 +69,111 @@ Create a mobile application that transforms social media recipe videos into user
 
 ## Database Schema
 
-# 📚 RecipeMe – Supabase Schema (v1)
+### 🗄️ **Overview**
+RecipeMe uses a Supabase PostgreSQL database with 3 core tables designed for efficient recipe processing and management.
 
 ---
 
-## ENUM Types
+### 📋 **Custom Types**
 
-| Name            | Values                                  | Notes                                     |
-|-----------------|-----------------------------------------|-------------------------------------------|
-| `recipe_status` | `pending`, `processing`, `ready`, `error` | Tracks async‑pipeline state of each recipe |
-| `text_src_type` | `asr`, `caption`, `ocr`                 | Identifies where a raw text snippet came from |
+| **Type Name**     | **Values**                                    | **Purpose**                                       |
+|-------------------|-----------------------------------------------|---------------------------------------------------|
+| `recipe_status`   | `pending`, `processing`, `ready`, `error`     | Tracks the AI processing pipeline state          |
+| `text_src_type`   | `asr`, `caption`, `ocr`                      | Identifies the source of extracted text content  |
 
 ---
 
-## Tables
+### 🔗 **Table Relationships**
 
-### `public.recipes`
-
-| Column        | Type / Default                              | Constraints / Notes                                  |
-|---------------|---------------------------------------------|------------------------------------------------------|
-| `id`          | `uuid` `PRIMARY KEY` `DEFAULT gen_random_uuid()` | |
-| `user_id`     | `uuid` `REFERENCES auth.users ON DELETE CASCADE` | Owner of the recipe                                  |
-| `video_url`   | `text` `NOT NULL`                           | Original video link                                  |
-| `platform`    | `text` `NOT NULL`                           | `tiktok`, `instagram`, `youtube`                     |
-| `creator`     | `text` `NOT NULL`                           | Handle / channel name                                |
-| `title`       | `text`                                      | Filled by LLM or video metadata                      |
-| `cuisine`     | `text`                                      | (optional)                                           |
-| `prep_time`   | `text`                                      | e.g. `15 min`                                        |
-| `ingredients` | `jsonb`                                     | Array of `{quantity, unit, item}` ‑ nullable         |
-| `steps`       | `jsonb`                                     | Array of strings ‑ nullable                          |
-| `tips`        | `text`                                      | Freeform notes                                       |
-| `status`      | `recipe_status` `DEFAULT 'pending'`         | Workflow state                                       |
-| `error_msg`   | `text`                                      | Populated if status = `error`                        |
-| `created_at`  | `timestamptz` `DEFAULT now()`               | |
-| `updated_at`  | `timestamptz` `DEFAULT now()`               | |
-
-**Indexes**
-
-```sql
-create index recipes_user_idx   on recipes(user_id);
-create index recipes_status_idx on recipes(status);
+```
+auth.users (Supabase Auth)
+    ↓ (user_id)
+recipes
+    ↓ (recipe_id)
+processing_jobs & raw_text_sources
 ```
 
-**RLS Policy – single "owner access" policy**
+---
+
+### 📊 **Table Definitions**
+
+#### **`recipes`** - Core recipe storage
+*Stores processed recipes from social media videos*
+
+| **Column**      | **Type**           | **Constraints**                  | **Description**                           |
+|-----------------|-------------------|----------------------------------|-------------------------------------------|
+| `id`            | `uuid`            | PRIMARY KEY, auto-generated      | Unique recipe identifier                  |
+| `user_id`       | `uuid`            | FK → `auth.users`, NOT NULL      | Recipe owner (Supabase Auth)             |
+| `video_url`     | `text`            | NOT NULL                         | Original social media video link         |
+| `platform`      | `text`            | NOT NULL                         | Source platform (tiktok/instagram/youtube) |
+| `creator`       | `text`            | NOT NULL                         | Content creator handle/username           |
+| `title`         | `text`            | nullable                         | Recipe title (AI-generated or manual)    |
+| `cuisine`       | `text`            | nullable                         | Cuisine type (e.g., "Italian", "Thai")   |
+| `prep_time`     | `text`            | nullable                         | Preparation time (e.g., "15 min")        |
+| `ingredients`   | `jsonb`           | nullable                         | Structured ingredient list                |
+| `steps`         | `jsonb`           | nullable                         | Cooking instructions array                |
+| `tips`          | `text`            | nullable                         | Additional cooking tips                   |
+| `status`        | `recipe_status`   | DEFAULT 'pending'                | Current processing state                  |
+| `error_msg`     | `text`            | nullable                         | Error details if processing fails         |
+| `created_at`    | `timestamptz`     | DEFAULT now()                    | Record creation timestamp                 |
+| `updated_at`    | `timestamptz`     | DEFAULT now()                    | Last modification timestamp               |
+
+**Security & Performance:**
+- ✅ Row Level Security (RLS) enabled
+- ✅ Users can only access their own recipes
+- ✅ Indexed on `user_id` and `status` for fast queries
+
+---
+
+#### **`processing_jobs`** - AI pipeline tracking
+*Tracks the status of video-to-recipe conversion jobs*
+
+| **Column**       | **Type**          | **Constraints**                    | **Description**                           |
+|------------------|-------------------|-----------------------------------|-------------------------------------------|
+| `id`             | `uuid`            | PRIMARY KEY, auto-generated       | Unique job identifier                     |
+| `recipe_id`      | `uuid`            | FK → `recipes(id)`, CASCADE       | Associated recipe                         |
+| `started_at`     | `timestamptz`     | DEFAULT now()                     | Job start time                           |
+| `finished_at`    | `timestamptz`     | nullable                          | Job completion time                       |
+| `current_stage`  | `text`            | nullable                          | Current processing stage                  |
+| `error_msg`      | `text`            | nullable                          | Error details if job fails               |
+
+**Stages:** `download` → `asr` → `ocr` → `llm` → `complete`
+
+---
+
+#### **`raw_text_sources`** - Extracted content storage
+*Stores raw text extracted from videos during processing*
+
+| **Column**      | **Type**           | **Constraints**                   | **Description**                           |
+|-----------------|-------------------|-----------------------------------|-------------------------------------------|
+| `id`            | `int8`            | PRIMARY KEY, auto-increment       | Unique source identifier                  |
+| `recipe_id`     | `uuid`            | FK → `recipes(id)`, CASCADE       | Associated recipe                         |
+| `src_type`      | `text_src_type`   | NOT NULL                          | Text extraction method                    |
+| `content`       | `text`            | NOT NULL                          | Raw extracted text content               |
+
+**Source Types:**
+- `asr` - Audio speech recognition
+- `caption` - Video overlay text
+- `ocr` - Optical character recognition
+
+---
+
+### 🔒 **Security Policies**
+
 ```sql
-create policy "recipes – owner access"
-on public.recipes
-as permissive
-for all
-to authenticated
-using     ( user_id = auth.uid() )
-with check ( user_id = auth.uid() );
+-- Users can only access their own recipes
+CREATE POLICY "recipes_owner_access" ON recipes
+  FOR ALL TO authenticated 
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+-- Processing jobs inherit recipe access
+CREATE POLICY "processing_jobs_owner_access" ON processing_jobs
+  FOR ALL TO authenticated
+  USING (recipe_id IN (
+    SELECT id FROM recipes WHERE user_id = auth.uid()
+  ));
 ```
-
-### `public.processing_jobs` (optional queue / audit)
-
-| Column          | Type / Default                                    | Notes                           |
-| --------------- | ------------------------------------------------- | ------------------------------- |
-| `id`            | `uuid` `PK` `DEFAULT gen_random_uuid()`           |                                 |
-| `recipe_id`     | `uuid` `REFERENCES recipes(id) ON DELETE CASCADE` |                                 |
-| `started_at`    | `timestamptz` `DEFAULT now()`                     |                                 |
-| `finished_at`   | `timestamptz`                                     |                                 |
-| `current_stage` | `text`                                            | `download`, `asr`, `ocr`, `llm` |
-| `error_msg`     | `text`                                            |                                 |
 
 ## Project Structure
 
