@@ -179,31 +179,48 @@ CREATE POLICY "processing_jobs_owner_access" ON processing_jobs
 
 ```
 recipeme/
+├── backend/                      # Python backend and infrastructure
+│   ├── api/                     # API endpoints
+│   ├── models/                  # Data models
+│   ├── services/                # Service layer
+│   ├── utils/                   # Utility functions
+│   ├── temp/                    # Temporary files
+│   ├── supabase/                # Supabase config and temp files
+│   ├── main.py                  # Backend entry point
+│   ├── config.py                # Backend configuration
+│   ├── pyproject.toml           # Python project config
+│   ├── poetry.lock              # Python dependencies lockfile
+│   └── ...
 ├── mobile/                      # React Native (Expo) frontend
-│   ├── src/
-│   │   ├── assets/             # Images, fonts, etc.
-│   │   │   ├── common/         # Shared components (buttons, inputs, etc.)
-│   │   │   └── recipe/         # Recipe-specific components
-│   │   ├── constants/          # App constants and configuration
-│   │   │   ├── theme.ts        # UI theme configuration
-│   │   │   └── config.ts       # App configuration
-│   │   ├── hooks/              # Custom React hooks
-│   │   ├── navigation/         # Navigation configuration
-│   │   ├── screens/            # Screen components
+│   ├── src/                     # App source code
+│   │   ├── assets/              # Images, fonts, etc.
+│   │   │   ├── common/          # Shared components (buttons, inputs, etc.)
+│   │   │   └── recipe/          # Recipe-specific components
+│   │   ├── constants/           # App constants and configuration
+│   │   │   ├── theme.ts         # UI theme configuration
+│   │   │   └── config.ts        # App configuration
+│   │   ├── hooks/               # Custom React hooks
+│   │   ├── navigation/          # Navigation configuration
+│   │   ├── screens/             # Screen components
 │   │   │   ├── HomeScreen.tsx
 │   │   │   ├── AddRecipeScreen.tsx
 │   │   │   └── CookbookScreen.tsx
-│   │   ├── services/           # API and external services
-│   │   │   ├── api.ts          # API client
-│   │   │   └── supabase.ts     # Supabase client
-│   │   ├── store/              # State management
-│   │   ├── types/              # TypeScript types/interfaces
-│   │   └── utils/              # Helper functions
-│   ├── App.tsx
-│   └── package.json
-│
-└── docs/                      # Documentation
-    └── CONTEXT.md
+│   │   ├── services/            # API and external services
+│   │   │   ├── api.ts           # API client
+│   │   │   └── supabase.ts      # Supabase client
+│   │   ├── store/               # State management
+│   │   ├── types/               # TypeScript types/interfaces
+│   │   └── utils/               # Helper functions
+│   ├── App.tsx                  # App entry point
+│   ├── package.json             # Frontend dependencies
+│   └── ...
+├── docs/                        # Documentation
+│   ├── CONTEXT.md
+│   └── ...
+├── .gitignore
+├── package.json                 # Project-level dependencies
+└── ...
+```
 
 ## Implementation Plan
 
