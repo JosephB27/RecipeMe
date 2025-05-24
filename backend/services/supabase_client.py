@@ -1,6 +1,6 @@
 from supabase import create_client, Client
 import jwt
-from config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
+from backend.config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
 from typing import Optional, Dict, Any
 
 # Create the main Supabase client (for general operations)
