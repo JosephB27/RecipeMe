@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+If you are not 100% confident in the code you are generating - use context7 mcp to check the documentation.
